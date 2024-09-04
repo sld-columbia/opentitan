@@ -214,7 +214,7 @@ def generate_alert_handler(top: Dict[str, object], out_path: Path) -> None:
     ipgen_render("alert_handler", topname, params, out_path)
 
 
-def generate_plic(top: Dict[str, object], out_path: Path) -> None:
+def generate_plic(top: Dict[str, object], out_path: Path, args: Dict[str, object]) -> None:
     log.info("Generating rv_plic with ipgen")
     topname = top["name"]
     params = {}
@@ -222,12 +222,15 @@ def generate_plic(top: Dict[str, object], out_path: Path) -> None:
     # Count number of interrupts
     # Interrupt source 0 is tied to 0 to conform RISC-V PLIC spec.
     # So, total number of interrupts are the number of entries in the list + 1
-    params["src"] = sum(
-        [x["width"] if "width" in x else 1 for x in top["interrupt"]]) + 1
+    #params["src"] = sum(
+    #    [x["width"] if "width" in x else 1 for x in top["interrupt"]]) + 1
+    params["src"] = int(args.plic_srcs)
 
     # Target and priority: Currently fixed
-    params["target"] = int(top["num_cores"], 0) if "num_cores" in top else 1
-    params["prio"] = 3
+    #params["target"] = int(top["num_cores"], 0) if "num_cores" in top else 1
+    #params["prio"] = 3
+    params["target"] = int(args.plic_targets)
+    params["prio"] = int(args.plic_prio)
 
     ipgen_render("rv_plic", topname, params, out_path)
 
@@ -907,7 +910,7 @@ def _process_top(topcfg: Dict[str, object], args: argparse.Namespace,
     if not args.no_plic and \
        not args.alert_handler_only and \
        not args.xbar_only:
-        generate_plic(completecfg, out_path)
+        generate_plic(completecfg, out_path, args)
         if args.plic_only:
             sys.exit()
 
@@ -1035,6 +1038,19 @@ def main():
                         default=False,
                         action="store_true",
                         help="Only return the list of blocks and exit.")
+
+    # PLIC generation settings
+    parser.add_argument("--plic_srcs",
+                        default=30,
+                        type=int)
+
+    parser.add_argument("--plic_targets",
+                        default=1,
+                        type=int)
+
+    parser.add_argument("--plic_prio",
+                        default=7,
+                        type=int)
 
     args = parser.parse_args()
 
